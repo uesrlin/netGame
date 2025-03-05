@@ -13,3 +13,7 @@ func main() {
 	}
 
 }
+
+func sendMessage(message string) {
+
+}
