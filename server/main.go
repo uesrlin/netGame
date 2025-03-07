@@ -1,19 +1,10 @@
 package main
 
-import "net"
+import "net_game/server/snet"
 
 func main() {
 
-	_, err := net.Dial("", "")
-	if err != nil {
-		return
-	}
-	for {
-
-	}
-
-}
-
-func sendMessage(message string) {
+	server := snet.NewServer("127.0.0.1", 8080, "", "")
+	server.Serve()
 
 }
