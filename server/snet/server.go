@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"time"
 )
 
 /**
@@ -83,19 +82,8 @@ func NewServer(addr string, port int, name string, version string) *Server {
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 
-	// 心跳配置
-	conn.SetDeadline(time.Now().Add(30 * time.Second))
-	heartbeart := time.NewTicker(10 * time.Second)
-	defer heartbeart.Stop()
-
 	// 使用带缓冲的读取器
 	reader := bufio.NewReader(conn)
-
-	go func() {
-		for range heartbeart.C {
-			conn.Write([]byte("❤")) // 发送心跳包
-		}
-	}()
 
 	for {
 		msg, err := reader.ReadString('\n')
@@ -112,7 +100,5 @@ func handleConn(conn net.Conn) {
 		// 发送响应给客户端
 		conn.Write([]byte("Message received: " + msg))
 
-		// 收到有效数据后重置超时
-		conn.SetDeadline(time.Now().Add(30 * time.Second))
 	}
 }
