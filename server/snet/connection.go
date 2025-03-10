@@ -1,7 +1,6 @@
 package snet
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net_game/server/siface"
@@ -20,14 +19,16 @@ type Connection struct {
 	// 当前连接的状态
 	isClosed bool
 	// 处理该连接的方法Router
-	handleAPI siface.HandleFunc
+	//handleAPI siface.HandleFunc
 	// 告知当前连接已经退出的channel
 	ExitChan chan bool
 	// 新增写通道
 	msgChan chan []byte
+	// 处理该链接的方法router
+	Router siface.IRouter
 }
 
-func (c Connection) Start() {
+func (c *Connection) Start() {
 	fmt.Println("Conn Start()...ConnID=", c.ConnID)
 	// 启动从当前连接的读数据的业务
 
@@ -39,9 +40,10 @@ func (c Connection) Start() {
 
 }
 
-func (c Connection) Stop() {
+func (c *Connection) Stop() {
 	fmt.Println("conn Stop()...ConnID=", c.ConnID)
 	if c.isClosed == true {
+
 		return
 	}
 	c.isClosed = true
@@ -54,51 +56,38 @@ func (c Connection) Stop() {
 	close(c.ExitChan)
 }
 
-func (c Connection) GetTCPConnection() *net.TCPConn {
+func (c *Connection) GetTCPConnection() *net.TCPConn {
 	return c.Conn
 
 }
 
-func (c Connection) GetConnID() uint32 {
+func (c *Connection) GetConnID() uint32 {
 	return c.ConnID
 
 }
 
-func (c Connection) RemoteAddr() net.Addr {
+func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 
 }
 
-func (c Connection) SendMsg(data []byte) error {
+func (c *Connection) SendMsg(data []byte) error {
 	// 将数据写入通道，由写协程处理
 	c.msgChan <- data
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, handleAPI siface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router siface.IRouter) *Connection {
 	c := &Connection{
-		Conn:      conn,
-		ConnID:    connID,
-		handleAPI: handleAPI,
-		isClosed:  false,
-		ExitChan:  make(chan bool, 1),
-		msgChan:   make(chan []byte, 1024), // 新增写通道初始化
+		Conn:   conn,
+		ConnID: connID,
+		//handleAPI: handleAPI,
+		isClosed: false,
+		ExitChan: make(chan bool, 1),
+		msgChan:  make(chan []byte), // 新增写通道初始化
+		Router:   router,
 	}
 	return c
-}
-
-func CallBackToClient(conn *net.TCPConn, cid uint32, data []byte, cnt int) error {
-	// 回显业务
-	fmt.Print("[Conn Handle cid is ]", cid, " CallbackToClient...")
-	rece := "收到了,data is："
-	byt := []byte(rece)
-	if _, err := conn.Write(append(byt, data[:cnt]...)); err != nil {
-		fmt.Println("write back buf err", err)
-		return errors.New("CallBackToClient error")
-	}
-	fmt.Println("接收的数据是:", string(data[:cnt]))
-	return nil
-
 }
 
 // 新增读协程实现
@@ -114,25 +103,44 @@ func (c *Connection) startReader() {
 			fmt.Println("read error", err)
 			return
 		}
-		// 处理读取到的数据（示例调用处理函数）
-		if er := c.handleAPI(c.Conn, c.ConnID, buf, n); er != nil {
-			fmt.Println("Conn is ", c.ConnID, "handle error", er)
-			break
+		req := Request{
+			conn: c,
+			// 注意这里的n   如果不采用n的话  会出现一定的乱码   因为buf的长度是512  而n是实际读取的长度
+			data: buf[:n],
 		}
+		// 执行路由处理方法
+		go func(request siface.IRequest) {
+			c.Router.PreHandle(request)
+			c.Router.Handle(request)
+			c.Router.PostHandle(request)
+		}(&req)
 
 	}
 }
 
 // 新增写协程实现
 func (c *Connection) startWriter() {
+	fmt.Println("Writer Goroutine is running...")
+	defer fmt.Println("Writer exit connID=", c.ConnID) // 添加退出日志
+
 	for {
 		select {
-		case data := <-c.msgChan:
-			if _, err := c.Conn.Write(data); err != nil {
-				fmt.Println("Send Data error:", err)
+		case data, ok := <-c.msgChan: // 添加通道状态检测
+			if !ok { // 通道已关闭
+				fmt.Println("msgChan is closed")
+				return
+			}
+			if _, err := c.GetTCPConnection().Write(data); err != nil {
+				fmt.Println("send data error", err)
+				c.ExitChan <- true // 触发连接关闭
 				return
 			}
 		case <-c.ExitChan:
+			// 关闭前发送剩余消息
+			close(c.msgChan)
+			for data := range c.msgChan {
+				c.Conn.Write(data)
+			}
 			return
 		}
 	}

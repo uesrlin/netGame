@@ -25,4 +25,4 @@ type IConnection interface {
 
 // 定义个处理链接业务的方法
 
-type HandleFunc func(*net.TCPConn, uint32, []byte, int) error
+//type HandleFunc func(*net.TCPConn, uint32, []byte, int) error

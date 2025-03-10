@@ -1,9 +1,9 @@
 package snet
 
 import (
-	"bufio"
 	"fmt"
 	"net"
+	"net_game/server/siface"
 )
 
 /**
@@ -13,10 +13,11 @@ import (
 
 // Server 服务器配置
 type Server struct {
-	Addr    string // 服务器地址
-	Port    int    // 服务器端口
-	Name    string // 服务器名称
-	Version string // 服务器版本
+	Addr    string         // 服务器地址
+	Port    int            // 服务器端口
+	Name    string         // 服务器名称
+	Version string         // 服务器版本
+	Router  siface.IRouter // 服务器路由
 }
 
 func (s *Server) Start() {
@@ -36,6 +37,7 @@ func (s *Server) Start() {
 			fmt.Println("启动监听失败", err.Error())
 			return
 		}
+		fmt.Println("服务器启动成功....")
 		// 记得关闭监听
 		defer listen.Close()
 		// 这里有多个连接，需要使用goroutine来处理
@@ -47,7 +49,7 @@ func (s *Server) Start() {
 				fmt.Println("建立连接失败", er.Error())
 				continue
 			}
-			dealConn := NewConnection(conn, cid, CallBackToClient)
+			dealConn := NewConnection(conn, cid, s.Router)
 			cid++
 			go dealConn.Start()
 
@@ -68,6 +70,9 @@ func (s *Server) Serve() {
 	// 阻塞在这里
 	select {}
 }
+func (s *Server) AddRouter(router siface.IRouter) {
+	s.Router = router
+}
 
 func NewServer(addr string, port int, name string, version string) *Server {
 	if name == "" {
@@ -76,29 +81,5 @@ func NewServer(addr string, port int, name string, version string) *Server {
 	if version == "" {
 		version = "1.0.0"
 	}
-	return &Server{Addr: addr, Port: port, Name: name, Version: version}
-}
-
-func handleConn(conn net.Conn) {
-	defer conn.Close()
-
-	// 使用带缓冲的读取器
-	reader := bufio.NewReader(conn)
-
-	for {
-		msg, err := reader.ReadString('\n')
-		if err != nil {
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				println("Connection timeout")
-			}
-			break
-		}
-		// 处理消息逻辑...
-		// 打印接收到的消息
-		fmt.Print("Message received:", string(msg))
-
-		// 发送响应给客户端
-		conn.Write([]byte("Message received: " + msg))
-
-	}
+	return &Server{Addr: addr, Port: port, Name: name, Version: version, Router: nil}
 }

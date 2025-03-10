@@ -8,32 +8,38 @@ import (
 )
 
 func main() {
-	// 连接到服务器
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
 		fmt.Println("Error connecting:", err.Error())
 		return
 	}
 	defer conn.Close()
+	fmt.Println("客户端连接成功!")
 
-	// 从标准输入读取数据
+	// 创建消息接收协程
+	go receiveMessages(conn)
+
+	// 主循环处理用户输入
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("输入消息: ")
+		fmt.Print("\renter message: ") // 使用\r保持在行首
 		message, _ := reader.ReadString('\n')
-
-		// 发送数据到服务器
 		conn.Write([]byte(message))
-
-		// 读取服务器的响应
-		response, er := bufio.NewReader(conn).ReadString('\n')
-		if er != nil {
-			fmt.Println("Error reading response:", er.Error())
-			return
-		}
-
-		// 打印服务器的响应
-		fmt.Print("服务器回复: " + response)
 	}
+}
 
+// 持续接收服务器消息的独立函数
+func receiveMessages(conn net.Conn) {
+	reader := bufio.NewReader(conn)
+	for {
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("\n连接已关闭:", err.Error())
+			os.Exit(0)
+		}
+		// 加入这一行
+		fmt.Printf("\r\x1b[K") // \x1b[K 清除当前行
+		fmt.Printf("服务器回复: %s\n", response)
+		fmt.Print("enter message: ") // 保持输入提示可见
+	}
 }
