@@ -2,6 +2,7 @@ package snet
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"net"
 	"net_game/server/siface"
 )
@@ -93,7 +94,17 @@ func NewConnection(conn *net.TCPConn, connID uint32, router siface.IRouter) *Con
 // 新增读协程实现
 func (c *Connection) startReader() {
 
-	fmt.Println("Reader Goroutine is running...")
+	logrus.WithFields(logrus.Fields{
+		"conn_id": c.ConnID,
+		"remote":  c.RemoteAddr().String(),
+	}).Debug("Reader goroutine started")
+
+	defer func() {
+		logrus.WithFields(logrus.Fields{
+			"conn_id": c.ConnID,
+		}).Warn("Reader exiting")
+		c.Stop()
+	}()
 	defer fmt.Println("connID=", c.ConnID, "Reader is exit, remote addr is", c.RemoteAddr().String())
 	defer c.Stop()
 	for {
@@ -120,8 +131,9 @@ func (c *Connection) startReader() {
 
 // 新增写协程实现
 func (c *Connection) startWriter() {
-	fmt.Println("Writer Goroutine is running...")
-	defer fmt.Println("Writer exit connID=", c.ConnID) // 添加退出日志
+	logrus.WithField("conn_id", c.ConnID).Debug("Writer goroutine started")
+
+	defer logrus.WithField("conn_id", c.ConnID).Warn("Writer exiting")
 
 	for {
 		select {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net_game/server/internal/logger/logrusLog"
 	"net_game/server/siface"
 	"net_game/server/snet"
 )
@@ -37,7 +38,9 @@ func (p *PingRouter) PostHandle(request siface.IRequest) {
 }
 
 func main() {
-
+	// 日志二选一都行
+	logrusLog.InitLogrus()
+	// zapLog.InitZapLog()
 	server := snet.NewServer("127.0.0.1", 8080, "", "")
 	server.AddRouter(&PingRouter{})
 	server.Serve()
