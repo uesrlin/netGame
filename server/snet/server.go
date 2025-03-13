@@ -3,7 +3,6 @@ package snet
 import (
 	"fmt"
 	"net"
-	"net_game/server/siface"
 )
 
 /**
@@ -13,11 +12,10 @@ import (
 
 // Server 服务器配置
 type Server struct {
-	Addr    string         // 服务器地址
-	Port    int            // 服务器端口
-	Name    string         // 服务器名称
-	Version string         // 服务器版本
-	Router  siface.IRouter // 服务器路由
+	Addr    string // 服务器地址
+	Port    int    // 服务器端口
+	Name    string // 服务器名称
+	Version string // 服务器版本
 }
 
 func (s *Server) Start() {
@@ -49,7 +47,9 @@ func (s *Server) Start() {
 				fmt.Println("建立连接失败", er.Error())
 				continue
 			}
-			dealConn := NewConnection(conn, cid, s.Router)
+			dealConn := NewConnection(conn, cid)
+			player := NewPlayer(dealConn)
+			dealConn.PlayerRef = player
 			cid++
 			go dealConn.Start()
 
@@ -70,9 +70,6 @@ func (s *Server) Serve() {
 	// 阻塞在这里
 	select {}
 }
-func (s *Server) AddRouter(router siface.IRouter) {
-	s.Router = router
-}
 
 func NewServer(addr string, port int, name string, version string) *Server {
 	if name == "" {
@@ -81,5 +78,5 @@ func NewServer(addr string, port int, name string, version string) *Server {
 	if version == "" {
 		version = "1.0.0"
 	}
-	return &Server{Addr: addr, Port: port, Name: name, Version: version, Router: nil}
+	return &Server{Addr: addr, Port: port, Name: name, Version: version}
 }

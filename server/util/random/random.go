@@ -18,3 +18,15 @@ func RandStringRunes(n int) string {
 	}
 	return string(b)
 }
+
+var nameChars = []rune("ABCDEFGHIJKLMNPQRSTUVWXYZ23456789")
+
+// 私有生成随机名方法
+func GenerateRandomName(length int) string {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]rune, length)
+	for i := range b {
+		b[i] = nameChars[r.Intn(len(nameChars))]
+	}
+	return string(b)
+}

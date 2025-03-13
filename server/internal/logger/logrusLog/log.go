@@ -84,21 +84,23 @@ func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	// 设置颜色
-	var levelColor int
-	switch entry.Level {
-	case logrus.WarnLevel:
-		levelColor = 33 // 黄色
-	case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
-		levelColor = 31 // 红色
-	case logrus.DebugLevel:
-		levelColor = 36 // 青色
-	default:
-		levelColor = 34 // 蓝色
-	}
+	//var levelColor int
+	//switch entry.Level {
+	//case logrus.WarnLevel:
+	//	levelColor = 33 // 黄色
+	//case logrus.ErrorLevel, logrus.FatalLevel, logrus.PanicLevel:
+	//	levelColor = 31 // 红色
+	//case logrus.DebugLevel:
+	//	levelColor = 36 // 青色
+	//default:
+	//	levelColor = 34 // 蓝色
+	//}
 	// 构建基础日志信息
 	fmt.Fprintf(b, "[%s]", f.Prefix)
-	fmt.Fprintf(b, "  \x1b[%dm[%s]\x1b[0m", levelColor, entry.Time.Format("2006-01-02 15:04:05"))
-	fmt.Fprintf(b, "  \x1b[%dm%-7s\x1b[0m", levelColor, strings.ToUpper(entry.Level.String())) // 带颜色的级别
+	fmt.Fprintf(b, "  [%s]", entry.Time.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(b, "  %-7s", strings.ToUpper(entry.Level.String())) // 带颜色的级别
+	//fmt.Fprintf(b, "  \x1b[%dm[%s]\x1b[0m", levelColor, entry.Time.Format("2006-01-02 15:04:05"))
+	//fmt.Fprintf(b, "  \x1b[%dm%-7s\x1b[0m", levelColor, strings.ToUpper(entry.Level.String())) // 带颜色的级别
 
 	// 添加消息主体
 	if entry.Message != "" {
@@ -117,7 +119,7 @@ func (f *CustomFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 
 	// 处理调用者信息
 	if entry.HasCaller() {
-		fmt.Fprintf(b, " \x1b[90m(%s:%d)\x1b[0m",
+		fmt.Fprintf(b, " %s:%d",
 			path.Base(entry.Caller.File), // 仅显示文件名
 			entry.Caller.Line)
 	}

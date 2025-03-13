@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"net"
-	"net_game/server/siface"
+	"strings"
 )
 
 /**
@@ -24,9 +24,8 @@ type Connection struct {
 	// 告知当前连接已经退出的channel
 	ExitChan chan bool
 	// 新增写通道
-	msgChan chan []byte
-	// 处理该链接的方法router
-	Router siface.IRouter
+	msgChan   chan []byte
+	PlayerRef *Player // ⚠️ 弱引用（非必须）
 }
 
 func (c *Connection) Start() {
@@ -78,7 +77,7 @@ func (c *Connection) SendMsg(data []byte) error {
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, router siface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32) *Connection {
 	c := &Connection{
 		Conn:   conn,
 		ConnID: connID,
@@ -86,7 +85,6 @@ func NewConnection(conn *net.TCPConn, connID uint32, router siface.IRouter) *Con
 		isClosed: false,
 		ExitChan: make(chan bool, 1),
 		msgChan:  make(chan []byte), // 新增写通道初始化
-		Router:   router,
 	}
 	return c
 }
@@ -114,18 +112,51 @@ func (c *Connection) startReader() {
 			fmt.Println("read error", err)
 			return
 		}
-		req := Request{
-			conn: c,
-			// 注意这里的n   如果不采用n的话  会出现一定的乱码   因为buf的长度是512  而n是实际读取的长度
-			data: buf[:n],
-		}
-		// 执行路由处理方法
-		go func(request siface.IRequest) {
-			c.Router.PreHandle(request)
-			c.Router.Handle(request)
-			c.Router.PostHandle(request)
-		}(&req)
+		// 新增命令处理
+		cmd := string(buf[:n])
 
+		c.handleCommand(cmd)
+
+	}
+}
+
+// 新增指令处理方法
+func (c *Connection) handleCommand(cmd string) {
+	// 示例：简单解析指令
+	suffix := strings.TrimSuffix(cmd, "\n")
+	if suffix == "cj" {
+		if player := c.PlayerRef; player != nil {
+			room, err := player.CreateRoom(2) // 创建房间，最多2个玩家
+			if err != nil {
+				logrus.Info("创建房间失败")
+				return
+			}
+
+			c.SendMsg([]byte("创建房间成功"))
+			room.CheckAndStart()
+			logrus.WithFields(logrus.Fields{"房间ID是:": room.GetID(), "玩家id是": player.GetID()}).Info("创建房间成功")
+
+		}
+	}
+	if suffix == "jr" {
+		if player := c.PlayerRef; player != nil {
+			// 尝试加入房间
+			for _, room := range rooms {
+				if !room.IsFull() {
+					err := player.JoinRoom(room)
+					// jion 里边有判断 如果慢的话就自动开始游戏
+					if err == nil {
+						c.SendMsg([]byte("加入房间成功"))
+						room.CheckAndStart()
+						logrus.WithFields(logrus.Fields{"房间ID是:": room.GetID(), "玩家id是": player.GetID()}).Info("加入房间成功")
+						return
+					}
+
+				}
+			}
+			logrus.Warn("没有可加入的房间")
+			c.SendMsg([]byte("没有可加入的房间"))
+		}
 	}
 }
 
@@ -142,6 +173,7 @@ func (c *Connection) startWriter() {
 				fmt.Println("msgChan is closed")
 				return
 			}
+
 			if _, err := c.GetTCPConnection().Write(data); err != nil {
 				fmt.Println("send data error", err)
 				c.ExitChan <- true // 触发连接关闭
