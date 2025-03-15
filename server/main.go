@@ -42,6 +42,7 @@ func main() {
 	logrusLog.InitLogrus()
 	// zapLog.InitZapLog()
 	server := snet.NewServer("127.0.0.1", 8080, "", "")
+	// 因为现在server里边是单个的 所以现在只能实现一个路由 如果多个的话就需要使用routerManger实现
 	server.AddRouter(&PingRouter{})
 	server.Serve()
 
