@@ -36,7 +36,7 @@ zap.S().Debugf("当前内存使用: %.2f MB", 123.45)
 
 */
 
-func InitZapLog() {
+func InitZapLog(logPath, logName string) {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
 	// 这里将输出的时间key 由原来的ts 改为 time
@@ -44,7 +44,8 @@ func InitZapLog() {
 	cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 
 	writer := &dynamicLogWriter{
-		logDir: "logs",
+		logDir:  logPath,
+		logName: logName,
 	}
 	// 提前创建日志目录
 	if err := os.MkdirAll(writer.logDir, 0755); err != nil {
@@ -102,6 +103,7 @@ type dynamicLogWriter struct {
 	currentDay string
 	file       *os.File
 	logDir     string
+	logName    string
 }
 
 func (w *dynamicLogWriter) Write(p []byte) (n int, err error) {
@@ -119,7 +121,7 @@ func (w *dynamicLogWriter) Write(p []byte) (n int, err error) {
 
 		}
 
-		filePath := filepath.Join(w.logDir, "app-"+currentDay+".log")
+		filePath := filepath.Join(w.logDir, w.logName+currentDay+".log")
 		file, er := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if er != nil {
 			return 0, er

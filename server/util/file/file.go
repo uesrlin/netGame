@@ -2,12 +2,11 @@ package file
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
 func ReadDataFromPath(path string) []byte {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		panic(fmt.Sprintf("Read file [%s] fail, error is %+v", path, err))
 	}

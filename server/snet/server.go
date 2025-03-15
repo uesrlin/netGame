@@ -1,9 +1,15 @@
 package snet
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"net_game/server/internal/config/app"
+	"net_game/server/internal/db/mysql"
+	"net_game/server/internal/db/redis"
 	"net_game/server/siface"
+	"net_game/server/util/file"
+	"net_game/server/util/path"
 )
 
 /**
@@ -13,18 +19,41 @@ import (
 
 // Server 服务器配置
 type Server struct {
-	Addr    string         // 服务器地址
-	Port    int            // 服务器端口
-	Name    string         // 服务器名称
-	Version string         // 服务器版本
-	Router  siface.IRouter // 服务器路由
+	*app.ConfigMap
+	//logger       logger.CustomLogger
+	redisManager *redis.Manager
+	mysqlManager *mysql.Manager
+	Router       siface.IRouter // 服务器路由
+}
+
+var appInstance *Server = nil
+
+func (a *Server) Init(ctx context.Context, configDir string) *Server {
+
+	// 初始化配置表
+	appConfigData := file.ReadDataFromPath(path.JoinPath(configDir, "app.yaml"))
+	a.ConfigMap = app.InitAppConfigMap(appConfigData)
+
+	// 初始化Mysql
+	//mysqlConfigData := file.ReadDataFromPath(path.JoinPath(configDir, "mysql.yaml"))
+	//mysqlDBConfig := mysql3.InitDBConfigMap(mysqlConfigData)
+	//a.mysqlManager = mysql.NewManager(ctx, mysqlDBConfig)
+
+	//初始化Redis
+	//redisConfigData := file.ReadDataFromPath(path.GetPath("config/redis.yaml"))
+	//redisDBConfig := redis2.InitDBConfigMap(redisConfigData)
+	//a.redisManager = redis.NewManager(ctx, redisDBConfig)
+	// 设置一下数据
+	appInstance = a
+	return a
 }
 
 func (s *Server) Start() {
 	// 这里写tcp服务器启动的逻辑
 	var cid uint32 = 0
 	//监听本地的端口
-	listenAddr := fmt.Sprintf("%s:%d", s.Addr, s.Port)
+	listenAddr := fmt.Sprintf("%s:%s", s.GetHost(), s.GetListenPoint())
+	fmt.Println(listenAddr)
 
 	go func() {
 		addr, er := net.ResolveTCPAddr("tcp", listenAddr)
@@ -74,12 +103,6 @@ func (s *Server) AddRouter(router siface.IRouter) {
 	s.Router = router
 }
 
-func NewServer(addr string, port int, name string, version string) *Server {
-	if name == "" {
-		name = "Server"
-	}
-	if version == "" {
-		version = "1.0.0"
-	}
-	return &Server{Addr: addr, Port: port, Name: name, Version: version, Router: nil}
+func GetClient(name string) *mysql.Client {
+	return appInstance.mysqlManager.GetClient(name)
 }

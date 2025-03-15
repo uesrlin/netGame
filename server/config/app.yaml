@@ -1,5 +1,14 @@
 app:
   log:
-    fileName:
-    filePath:
+    fileName: "app-log"
+    filePath: "server/logs"
   debug: true
+  host: 127.0.0.1
+  name: netGame
+  version: 1.0.
+  listenPoints: 8080
+
+
+
+
+

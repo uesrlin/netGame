@@ -2,7 +2,7 @@ package snet
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"net"
 	"net_game/server/siface"
 )
@@ -94,18 +94,14 @@ func NewConnection(conn *net.TCPConn, connID uint32, router siface.IRouter) *Con
 // 新增读协程实现
 func (c *Connection) startReader() {
 
-	logrus.WithFields(logrus.Fields{
-		"conn_id": c.ConnID,
-		"remote":  c.RemoteAddr().String(),
-	}).Debug("Reader goroutine started")
+	// logrus.WithFields(logrus.Fields{"conn_id": c.ConnID, "remote":  c.RemoteAddr().String(),}).Debug("Reader goroutine started")
+	zap.S().Debugw("Reader goroutine started", "conn_id ", c.ConnID, "remote addr", c.RemoteAddr().String())
 
 	defer func() {
-		logrus.WithFields(logrus.Fields{
-			"conn_id": c.ConnID,
-		}).Warn("Reader exiting")
+		//logrus.WithFields(logrus.Fields{ "conn_id": c.ConnID,}).Warn("Reader exiting")
+		zap.S().Debugw("Reader exiting", "conn_id ", c.ConnID, "remote addr", c.RemoteAddr().String())
 		c.Stop()
 	}()
-	defer fmt.Println("connID=", c.ConnID, "Reader is exit, remote addr is", c.RemoteAddr().String())
 	defer c.Stop()
 	for {
 		buf := make([]byte, 512)
@@ -131,9 +127,10 @@ func (c *Connection) startReader() {
 
 // 新增写协程实现
 func (c *Connection) startWriter() {
-	logrus.WithField("conn_id", c.ConnID).Debug("Writer goroutine started")
-
-	defer logrus.WithField("conn_id", c.ConnID).Warn("Writer exiting")
+	//logrus.WithField("conn_id", c.ConnID).Debug("Writer goroutine started")
+	zap.S().Debugw("Writer goroutine started", "conn_id ", c.ConnID, "remote addr", c.RemoteAddr().String())
+	//defer logrus.WithField("conn_id", c.ConnID).Warn("Writer exiting")
+	defer zap.S().Debugw("Writer exiting ", "conn_id ", c.ConnID, "remote addr", c.RemoteAddr().String())
 
 	for {
 		select {

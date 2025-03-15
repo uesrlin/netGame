@@ -6,6 +6,6 @@ dbs:
     maxPoolSize: 10
     minPoolSize: 10
     user: "root"
-    passwd: "root"
+    passwd: "123456"
     timeout: 10
 

@@ -1,8 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"net_game/server/internal/logger/logrusLog"
+	"net_game/server/internal/logger/zapLog"
 	"net_game/server/siface"
 	"net_game/server/snet"
 )
@@ -39,10 +40,16 @@ func (p *PingRouter) PostHandle(request siface.IRequest) {
 }
 
 func main() {
-	// 正常来说app和server放在一起.然后配置在一起
-	logrusLog.InitLogrus()
-	server := snet.NewServer("127.0.0.1", 8080, "", "")
-	// 因为现在server里边是单个的 所以现在只能实现一个路由 如果多个的话就需要使用routerManger实现
+	configDir := flag.String("ConfigDir", "server/config/", "配置表路径必须设置")
+	flag.Parse()
+	fmt.Println("configDir: ", *configDir)
+
+	app := snet.Server{}
+	server := app.Init(nil, *configDir)
+	//logrusLog.InitLogrus(app.GetLogFilePath(), app.GetLogFileName())
+	zapLog.InitZapLog(app.GetLogFilePath(), app.GetLogFileName())
+
+	//// 因为现在server里边是单个的 所以现在只能实现一个路由 如果多个的话就需要使用routerManger实现
 	server.AddRouter(&PingRouter{})
 	server.Serve()
 

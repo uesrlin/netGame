@@ -2,7 +2,7 @@ package app
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type LogConfig struct {
@@ -11,11 +11,12 @@ type LogConfig struct {
 }
 
 type Config struct {
-	LogConfig       LogConfig `yaml:"log"`
-	Salt            string    `yaml:"salt"`
-	Debug           bool      `yaml:"debug"`
-	ListenPoint     string    `yaml:"listenPoint"`
-	InternalService bool      `yaml:"internalService"`
+	LogConfig   LogConfig `yaml:"log"`
+	Debug       bool      `yaml:"debug"`
+	Host        string    `yaml:"host"`
+	Name        string    `yaml:"name"`
+	Version     string    `yaml:"version"`
+	ListenPoint string    `yaml:"listenPoints"`
 }
 
 // ConfigMap /**
@@ -42,8 +43,8 @@ func (c *ConfigMap) GetLogFileName() string {
 	return c.App.LogConfig.FileName
 }
 
-func (c *ConfigMap) GetSalt() string {
-	return c.App.Salt
+func (c *ConfigMap) GetHost() string {
+	return c.App.Host
 }
 
 func (c *ConfigMap) GetDebug() bool {
@@ -54,6 +55,6 @@ func (c *ConfigMap) GetListenPoint() string {
 	return c.App.ListenPoint
 }
 
-func (c *ConfigMap) IsInternalService() bool {
-	return c.App.InternalService
+func (c *ConfigMap) Version() string {
+	return c.App.Version
 }

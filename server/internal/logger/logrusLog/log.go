@@ -36,14 +36,13 @@ import (
 logrus.Warn("端口监听中", "IP", "192.168.1.1", "Port", 8080) 高版本使用1.9+ 以上
 */
 
-func InitLogrus() {
-	const logDir = "server/logs"
+func InitLogrus(logPath, logName string) {
 
 	// 显式创建日志目录
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logPath, 0755); err != nil {
 		panic(fmt.Sprintf("创建日志目录失败: %v", err))
 	}
-	rotator, err := logrotator.NewTimeBasedRotator(filepath.Join(logDir, "%Y%m%d-%H%M.log"), time.Hour*24)
+	rotator, err := logrotator.NewTimeBasedRotator(filepath.Join(logPath, logName+"%Y%m%d-%H%M.log"), time.Hour*24)
 	if err != nil {
 		panic(fmt.Sprintf("logrotator.NewTimeBasedRotator Error %s exist", err))
 	}
