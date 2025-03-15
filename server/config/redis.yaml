@@ -1,0 +1,6 @@
+dbs:
+  common:
+    host: "127.0.0.1:6379"
+    passwd: ""
+    maxPoolSize: 10
+    minPoolSize: 10

@@ -28,6 +28,7 @@ func (p *PingRouter) Handle(request siface.IRequest) {
 		return
 	}
 }
+
 func (p *PingRouter) PostHandle(request siface.IRequest) {
 	fmt.Println("after")
 	err := request.GetConnection().SendMsg([]byte(" received message  after\n"))
@@ -38,9 +39,8 @@ func (p *PingRouter) PostHandle(request siface.IRequest) {
 }
 
 func main() {
-	// 日志二选一都行
+	// 正常来说app和server放在一起.然后配置在一起
 	logrusLog.InitLogrus()
-	// zapLog.InitZapLog()
 	server := snet.NewServer("127.0.0.1", 8080, "", "")
 	// 因为现在server里边是单个的 所以现在只能实现一个路由 如果多个的话就需要使用routerManger实现
 	server.AddRouter(&PingRouter{})

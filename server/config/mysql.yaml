@@ -1,0 +1,11 @@
+dbs:
+  project:
+    host: "127.0.0.1"
+    port: "3306"
+    dbName: "project"
+    maxPoolSize: 10
+    minPoolSize: 10
+    user: "root"
+    passwd: "root"
+    timeout: 10
+

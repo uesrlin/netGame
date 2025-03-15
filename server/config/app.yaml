@@ -1,0 +1,5 @@
+app:
+  log:
+    fileName:
+    filePath:
+  debug: true
