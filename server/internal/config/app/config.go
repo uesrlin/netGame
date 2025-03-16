@@ -10,6 +10,12 @@ type LogConfig struct {
 	FilePath string `yaml:"filePath"`
 }
 
+/*
+maxConn: 1000
+MaxPackageSize: 4096
+WorkerPoolSize: 10
+MaxWorkerTaskLen: 1024
+*/
 type Config struct {
 	LogConfig   LogConfig `yaml:"log"`
 	Debug       bool      `yaml:"debug"`

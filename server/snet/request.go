@@ -9,12 +9,15 @@ import "net_game/server/siface"
 
 type Request struct {
 	conn siface.IConnection
-	data []byte
+	msg  siface.IMessage
 }
 
 func (r *Request) GetConnection() siface.IConnection {
 	return r.conn
 }
 func (r *Request) GetData() []byte {
-	return r.data
+	return r.msg.GetData()
+}
+func (r *Request) GetMsgId() uint32 {
+	return r.msg.GetMsgId()
 }

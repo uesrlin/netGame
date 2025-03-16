@@ -1,8 +1,10 @@
 package snet
 
 import (
+	"errors"
 	"fmt"
 	"go.uber.org/zap"
+	"io"
 	"net"
 	"net_game/server/siface"
 )
@@ -19,8 +21,6 @@ type Connection struct {
 	ConnID uint32
 	// 当前连接的状态
 	isClosed bool
-	// 处理该连接的方法Router
-	//handleAPI siface.HandleFunc
 	// 告知当前连接已经退出的channel
 	ExitChan chan bool
 	// 新增写通道
@@ -72,9 +72,20 @@ func (c *Connection) RemoteAddr() net.Addr {
 
 }
 
-func (c *Connection) SendMsg(data []byte) error {
+func (c *Connection) SendMsg(msgid uint32, data []byte) error {
+	if c.isClosed == true {
+		return errors.New("connection closed when send msg")
+	}
+	pack := NewDataPack()
+	// 将data进行封包
+	msg, err := pack.Pack(NewMsgPackage(msgid, data))
+	if err != nil {
+		fmt.Println("pack error msg id = ", msgid)
+		return errors.New("pack error msg")
+	}
+
 	// 将数据写入通道，由写协程处理
-	c.msgChan <- data
+	c.msgChan <- msg
 	return nil
 }
 
@@ -102,18 +113,37 @@ func (c *Connection) startReader() {
 		zap.S().Debugw("Reader exiting", "conn_id ", c.ConnID, "remote addr", c.RemoteAddr().String())
 		c.Stop()
 	}()
-	defer c.Stop()
 	for {
-		buf := make([]byte, 512)
-		n, err := c.Conn.Read(buf)
+		pack := NewDataPack()
+		// 读取客户端的Msg Head
+		headData := make([]byte, pack.GetHeadLen())
+		_, err := io.ReadFull(c.Conn, headData)
 		if err != nil {
-			fmt.Println("read error", err)
-			return
+			fmt.Println("")
+			break
 		}
+		// 将读到的头部数据进行拆包到msg中
+		msg, err := pack.Unpack(headData)
+		if err != nil {
+			fmt.Println("unpack error", err)
+			break
+		}
+		// 根据dataLen再次读取Data，放在msg.Data中
+		var data []byte
+		if msg.GetMsgLen() > 0 {
+			data = make([]byte, msg.GetMsgLen())
+			_, er := io.ReadFull(c.Conn, data)
+			if er != nil {
+				fmt.Println("read msg data error", er)
+				break
+			}
+		}
+		msg.SetData(data)
+
 		req := Request{
 			conn: c,
 			// 注意这里的n   如果不采用n的话  会出现一定的乱码   因为buf的长度是512  而n是实际读取的长度
-			data: buf[:n],
+			msg: msg,
 		}
 		// 执行路由处理方法
 		go func(request siface.IRequest) {
