@@ -21,7 +21,7 @@ func main() {
 
 	// 发送封包的消息
 	dp := snet.NewDataPack()
-	msgData, er := dp.Pack(snet.NewMsgPackage(0, []byte("hello")))
+	msgData, er := dp.Pack(snet.NewMsgPackage(1, []byte("nihao123")))
 	if er != nil {
 		fmt.Println("Pack error:", err)
 		return

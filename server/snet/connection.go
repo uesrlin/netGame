@@ -26,7 +26,7 @@ type Connection struct {
 	// 新增写通道
 	msgChan chan []byte
 	// 处理该链接的方法router
-	Router siface.IRouter
+	msgHandel siface.IMsgHandle
 }
 
 func (c *Connection) Start() {
@@ -89,15 +89,15 @@ func (c *Connection) SendMsg(msgid uint32, data []byte) error {
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, router siface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router siface.IMsgHandle) *Connection {
 	c := &Connection{
 		Conn:   conn,
 		ConnID: connID,
 		//handleAPI: handleAPI,
-		isClosed: false,
-		ExitChan: make(chan bool, 1),
-		msgChan:  make(chan []byte), // 新增写通道初始化
-		Router:   router,
+		isClosed:  false,
+		ExitChan:  make(chan bool, 1),
+		msgChan:   make(chan []byte), // 新增写通道初始化
+		msgHandel: router,
 	}
 	return c
 }
@@ -145,12 +145,7 @@ func (c *Connection) startReader() {
 			// 注意这里的n   如果不采用n的话  会出现一定的乱码   因为buf的长度是512  而n是实际读取的长度
 			msg: msg,
 		}
-		// 执行路由处理方法
-		go func(request siface.IRequest) {
-			c.Router.PreHandle(request)
-			c.Router.Handle(request)
-			c.Router.PostHandle(request)
-		}(&req)
+		c.msgHandel.DoMsgHandler(&req)
 
 	}
 }

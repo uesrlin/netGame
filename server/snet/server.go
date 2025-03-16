@@ -23,7 +23,7 @@ type Server struct {
 	//logger       logger.CustomLogger
 	redisManager *redis.Manager
 	mysqlManager *mysql.Manager
-	Router       siface.IRouter // 服务器路由
+	Router       siface.IMsgHandle // 服务器路由
 }
 
 var appInstance *Server = nil
@@ -43,6 +43,7 @@ func (a *Server) Init(ctx context.Context, configDir string) *Server {
 	//redisConfigData := file.ReadDataFromPath(path.GetPath("config/redis.yaml"))
 	//redisDBConfig := redis2.InitDBConfigMap(redisConfigData)
 	//a.redisManager = redis.NewManager(ctx, redisDBConfig)
+	a.Router = NewMsgHandle()
 	// 设置一下数据
 	appInstance = a
 	return a
@@ -99,8 +100,8 @@ func (s *Server) Serve() {
 	// 阻塞在这里
 	select {}
 }
-func (s *Server) AddRouter(router siface.IRouter) {
-	s.Router = router
+func (s *Server) AddRouter(msgId uint32, router siface.IRouter) {
+	s.Router.AddRouter(msgId, router)
 }
 
 func GetClient(name string) *mysql.Client {
