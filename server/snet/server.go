@@ -57,6 +57,7 @@ func (s *Server) Start() {
 	fmt.Println(listenAddr)
 
 	go func() {
+		s.Router.StartWorkerPool()
 		addr, er := net.ResolveTCPAddr("tcp", listenAddr)
 		if er != nil {
 			fmt.Println("解析本地地址失败", er.Error())

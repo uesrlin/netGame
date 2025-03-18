@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go.uber.org/zap"
 	"net_game/server/internal/logger/zapLog"
 	"net_game/server/siface"
 	"net_game/server/snet"
@@ -12,13 +13,19 @@ type PingRouter struct {
 	snet.BaseRouter
 }
 
-func (p *PingRouter) PreHandle(request siface.IRequest) {
-	fmt.Println("before")
-
-}
+//
+//func (p *PingRouter) PreHandle(request siface.IRequest) {
+//	zap.S().Debugw("请求预处理", "request MsgID = ", request.GetMsgId())
+//
+//}
 
 func (p *PingRouter) Handle(request siface.IRequest) {
-	fmt.Printf("Addr :%s,receive message conn is:%d ,data is %s\n", request.GetConnection().RemoteAddr(), request.GetConnection().GetConnID(), string(request.GetData()))
+
+	zap.S().Debugw("请求正在处理",
+		"Addr is", request.GetConnection().RemoteAddr(),
+		"connId is ", request.GetConnection().GetConnID(),
+		"request MsgID = ", request.GetMsgId(),
+		"data is ", string(request.GetData()))
 
 	// 由于消息结构进行了封装，所以需要进行重写
 	err := request.GetConnection().SendMsg(0, []byte("ping ...ping...ping"))
@@ -29,8 +36,7 @@ func (p *PingRouter) Handle(request siface.IRequest) {
 }
 
 func (p *PingRouter) PostHandle(request siface.IRequest) {
-	fmt.Println("after")
-
+	zap.S().Debugw("请求追加处理", "request MsgID = ", request.GetMsgId())
 }
 
 type Hello struct {
@@ -38,12 +44,17 @@ type Hello struct {
 }
 
 func (p *Hello) PreHandle(request siface.IRequest) {
-	fmt.Println("hello before")
+	zap.S().Debugw("请求预处理", "request MsgID = ", request.GetMsgId())
 
 }
 
 func (p *Hello) Handle(request siface.IRequest) {
-	fmt.Printf("Addr :%s,receive message conn is:%d ,data is %s\n", request.GetConnection().RemoteAddr(), request.GetConnection().GetConnID(), string(request.GetData()))
+
+	zap.S().Debugw("请求正在处理",
+		"Addr is", request.GetConnection().RemoteAddr(),
+		"connId is ", request.GetConnection().GetConnID(),
+		"request MsgID = ", request.GetMsgId(),
+		"data is ", string(request.GetData()))
 
 	// 由于消息结构进行了封装，所以需要进行重写
 	err := request.GetConnection().SendMsg(1, []byte("hello ...hello ...hello"))
@@ -53,10 +64,10 @@ func (p *Hello) Handle(request siface.IRequest) {
 	}
 }
 
-func (p *Hello) PostHandle(request siface.IRequest) {
-	fmt.Println("hello after")
-
-}
+//func (p *Hello) PostHandle(request siface.IRequest) {
+//	zap.S().Debugw("请求处理结束后", "request MsgID = ", request.GetMsgId())
+//
+//}
 
 func main() {
 	configDir := flag.String("ConfigDir", "server/config/", "配置表路径必须设置")

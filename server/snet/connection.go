@@ -49,12 +49,13 @@ func (c *Connection) Stop() {
 	}
 	c.isClosed = true
 	// 关闭socket连接
-	c.Conn.Close()
 
 	// 告知Writer关闭
 	c.ExitChan <- true
 	// 回收资源
 	close(c.ExitChan)
+	close(c.msgChan)
+	c.Conn.Close()
 }
 
 func (c *Connection) GetTCPConnection() *net.TCPConn {
@@ -83,7 +84,6 @@ func (c *Connection) SendMsg(msgid uint32, data []byte) error {
 		fmt.Println("pack error msg id = ", msgid)
 		return errors.New("pack error msg")
 	}
-
 	// 将数据写入通道，由写协程处理
 	c.msgChan <- msg
 	return nil
@@ -142,10 +142,17 @@ func (c *Connection) startReader() {
 
 		req := Request{
 			conn: c,
-			// 注意这里的n   如果不采用n的话  会出现一定的乱码   因为buf的长度是512  而n是实际读取的长度
-			msg: msg,
+			msg:  msg,
 		}
-		c.msgHandel.DoMsgHandler(&req)
+
+		// 判断线程池是否开启
+		if c.msgHandel.IsWorkerPoolStarted() {
+			// 将消息发送给消息队列
+			c.msgHandel.SendMsgToTaskQueue(&req)
+		} else {
+			// 直接执行  创建一个特有的workerId 表示没有走线程处理池
+			c.msgHandel.DoMsgHandler(ErrWorkerId, &req)
+		}
 
 	}
 }
