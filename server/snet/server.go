@@ -3,6 +3,7 @@ package snet
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"net"
 	"net_game/server/internal/config/app"
 	"net_game/server/internal/db/mysql"
@@ -23,7 +24,10 @@ type Server struct {
 	//logger       logger.CustomLogger
 	redisManager *redis.Manager
 	mysqlManager *mysql.Manager
-	Router       siface.IMsgHandle // 服务器路由
+	Router       siface.IMsgHandle                   // 服务器路由
+	ConMgr       siface.IconnManager                 // 连接管理
+	OnConnStop   func(connection siface.IConnection) // Hook函数 创建连接后调用
+	OnConnStart  func(connection siface.IConnection) // Hook函数 创建连接前调用
 }
 
 var appInstance *Server = nil
@@ -44,6 +48,7 @@ func (a *Server) Init(ctx context.Context, configDir string) *Server {
 	//redisDBConfig := redis2.InitDBConfigMap(redisConfigData)
 	//a.redisManager = redis.NewManager(ctx, redisDBConfig)
 	a.Router = NewMsgHandle()
+	a.ConMgr = NewConnManager()
 	// 设置一下数据
 	appInstance = a
 	return a
@@ -80,7 +85,14 @@ func (s *Server) Start() {
 				fmt.Println("建立连接失败", er.Error())
 				continue
 			}
-			dealConn := NewConnection(conn, cid, s.Router)
+
+			// 对最大连接数进行限制
+			if s.ConMgr.Len() >= MaxConn {
+				fmt.Println("连接数已达上限")
+				conn.Close()
+				continue
+			}
+			dealConn := NewConnection(s, conn, cid, s.Router)
 			cid++
 			go dealConn.Start()
 
@@ -91,7 +103,9 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Stop() {
+	zap.S().Info("[STOP]  server ")
 	// 这里写tcp服务器停止的逻辑
+	s.ConMgr.ClearConn()
 
 }
 
@@ -105,6 +119,30 @@ func (s *Server) AddRouter(msgId uint32, router siface.IRouter) {
 	s.Router.AddRouter(msgId, router)
 }
 
-func GetClient(name string) *mysql.Client {
-	return appInstance.mysqlManager.GetClient(name)
+func (s *Server) GetManger() siface.IconnManager {
+	return s.ConMgr
+}
+
+func (s *Server) SetConnStart(hookFunc func(connection siface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+func (s *Server) SetConnStop(hookFunc func(connection siface.IConnection)) {
+	s.OnConnStop = hookFunc
+}
+
+func (s *Server) CallConnStart(conn siface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Println("——————>Call onStart()<————————")
+		s.OnConnStart(conn)
+	}
+}
+
+func (s *Server) CallConnStop(conn siface.IConnection) {
+	if s.OnConnStop != nil {
+		fmt.Println("——————>Call onStop()<————————")
+		s.OnConnStop(conn)
+
+	}
+
 }

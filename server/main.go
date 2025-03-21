@@ -69,6 +69,24 @@ func (p *Hello) Handle(request siface.IRequest) {
 //
 //}
 
+// 连接断开之前做的事
+
+func DoConnBegin(conn siface.IConnection) {
+	fmt.Println("========>  DoConnBegin is Called ")
+	if err := conn.SendMsg(202, []byte("DoConnBegin")); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+// 连接断开之后做的事
+
+func DoConnLost(conn siface.IConnection) {
+	fmt.Println("========>  DoConnLost is Called ")
+	fmt.Println("conn Id=", conn.GetConnID(), "is Lost ")
+
+}
+
 func main() {
 	configDir := flag.String("ConfigDir", "server/config/", "配置表路径必须设置")
 	flag.Parse()
@@ -77,6 +95,10 @@ func main() {
 	app := snet.Server{}
 	server := app.Init(nil, *configDir)
 	zapLog.InitZapLog(app.GetLogFilePath(), app.GetLogFileName())
+
+	// 注册钩子函数
+	server.SetConnStart(DoConnBegin)
+	server.SetConnStop(DoConnLost)
 
 	//// 因为现在server里边是单个的 所以现在只能实现一个路由 如果多个的话就需要使用routerManger实现
 	server.AddRouter(0, &PingRouter{})

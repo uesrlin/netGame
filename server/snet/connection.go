@@ -27,6 +27,8 @@ type Connection struct {
 	msgChan chan []byte
 	// 处理该链接的方法router
 	msgHandel siface.IMsgHandle
+	// 由于每创建一个连接就需要添加到连接管理器这里集成了server
+	TcpServer siface.IServer
 }
 
 func (c *Connection) Start() {
@@ -38,6 +40,8 @@ func (c *Connection) Start() {
 
 	// 启动写协程
 	go c.startWriter()
+	// 调用hook函数
+	c.TcpServer.CallConnStart(c)
 
 }
 
@@ -47,11 +51,16 @@ func (c *Connection) Stop() {
 
 		return
 	}
+
 	c.isClosed = true
 	// 关闭socket连接
+	c.TcpServer.CallConnStop(c)
 
 	// 告知Writer关闭
 	c.ExitChan <- true
+
+	// 将当前连接从连接管理器中删除
+	c.TcpServer.GetManger().Remove(c)
 	// 回收资源
 	close(c.ExitChan)
 	close(c.msgChan)
@@ -89,16 +98,20 @@ func (c *Connection) SendMsg(msgid uint32, data []byte) error {
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, router siface.IMsgHandle) *Connection {
+func NewConnection(server siface.IServer, conn *net.TCPConn, connID uint32, router siface.IMsgHandle) *Connection {
 	c := &Connection{
-		Conn:   conn,
-		ConnID: connID,
+		TcpServer: server,
+		Conn:      conn,
+		ConnID:    connID,
 		//handleAPI: handleAPI,
 		isClosed:  false,
 		ExitChan:  make(chan bool, 1),
 		msgChan:   make(chan []byte), // 新增写通道初始化
 		msgHandel: router,
 	}
+
+	// 将当前连接添加到连接管理中
+	c.TcpServer.GetManger().Add(c)
 	return c
 }
 
@@ -178,7 +191,7 @@ func (c *Connection) startWriter() {
 			}
 		case <-c.ExitChan:
 			// 关闭前发送剩余消息
-			close(c.msgChan)
+			//由于stop时触发的信号 这里就不用管了
 			for data := range c.msgChan {
 				c.Conn.Write(data)
 			}
