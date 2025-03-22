@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net_game/server/siface"
+	"sync"
 )
 
 /**
@@ -29,6 +30,10 @@ type Connection struct {
 	msgHandel siface.IMsgHandle
 	// 由于每创建一个连接就需要添加到连接管理器这里集成了server
 	TcpServer siface.IServer
+	//连接属性
+	property map[string]interface{}
+	//保护连接属性的锁
+	propertyLock sync.RWMutex
 }
 
 func (c *Connection) Start() {
@@ -108,6 +113,7 @@ func NewConnection(server siface.IServer, conn *net.TCPConn, connID uint32, rout
 		ExitChan:  make(chan bool, 1),
 		msgChan:   make(chan []byte), // 新增写通道初始化
 		msgHandel: router,
+		property:  make(map[string]interface{}),
 	}
 
 	// 将当前连接添加到连接管理中
@@ -198,4 +204,26 @@ func (c *Connection) startWriter() {
 			return
 		}
 	}
+}
+
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+	c.property[key] = value
+}
+
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.RLock()
+	defer c.propertyLock.RUnlock()
+	if value, ok := c.property[key]; ok {
+		return value, nil
+	} else {
+		return nil, errors.New("no property found")
+	}
+}
+
+func (c *Connection) RemoveProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+	delete(c.property, key)
 }

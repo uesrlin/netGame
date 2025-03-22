@@ -69,13 +69,16 @@ func (p *Hello) Handle(request siface.IRequest) {
 //
 //}
 
-// 连接断开之前做的事
+// 连接创建之后做的事
 
 func DoConnBegin(conn siface.IConnection) {
 	fmt.Println("========>  DoConnBegin is Called ")
 	if err := conn.SendMsg(202, []byte("DoConnBegin")); err != nil {
 		fmt.Println(err)
 	}
+	// 给当前的连接设置一些属性
+	conn.SetProperty("Name", "张三")
+	conn.SetProperty("Home", "北京")
 
 }
 
@@ -84,6 +87,13 @@ func DoConnBegin(conn siface.IConnection) {
 func DoConnLost(conn siface.IConnection) {
 	fmt.Println("========>  DoConnLost is Called ")
 	fmt.Println("conn Id=", conn.GetConnID(), "is Lost ")
+	// 获取当前连接的属性
+	if name, err := conn.GetProperty("Name"); err == nil {
+		fmt.Println("Name=", name)
+	}
+	if home, err := conn.GetProperty("Home"); err == nil {
+		fmt.Println("Home=", home)
+	}
 
 }
 
